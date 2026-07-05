@@ -73,6 +73,20 @@
                             </descriptors>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>plugin-flink2.1.x</id>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <phase>compile</phase>
+                        <configuration>
+                            <finalName>plugins</finalName>
+                            <attach>false</attach>
+                            <descriptors>
+                                <descriptor>src/main/assemblies/plugin-flink2.1.x-assembly.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
 

@@ -13,6 +13,7 @@
         <module>lineage-loader</module>
         <module>lineage-flink1.14.x</module>
         <module>lineage-flink1.16.x</module>
+        <module>lineage-flink2.1.x</module>
         <module>lineage-client</module>
         <module>lineage-web</module>
         <module>lineage-server</module>

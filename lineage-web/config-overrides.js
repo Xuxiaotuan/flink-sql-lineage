@@ -61,7 +61,7 @@ module.exports = {
       return  {
           proxy: {
             '*': {
-              target: 'http://192.168.90.150:8194',
+              target: 'http://127.0.0.1:8194',
               logLevel:'debug',
               changeOrigin: true,
             },

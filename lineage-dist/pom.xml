@@ -35,6 +35,12 @@
 
         <dependency>
             <groupId>com.hw.lineage</groupId>
+            <artifactId>lineage-flink2.1.x</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.hw.lineage</groupId>
             <artifactId>lineage-server-start</artifactId>
             <version>${project.version}</version>
         </dependency>
