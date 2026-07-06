@@ -28,6 +28,89 @@ SQL + listener schema -> flink-sql-lineage 重新跑 Flink Planner -> 字段级�
 
 这里最关键的一点是：**Flink listener 不直接产出字段级血缘**。Flink 2.x 原生 lineage API 给的是运行时数据集、表级关系和 schema 上下文。字段级血缘仍然要让 `flink-sql-lineage` 用相同 schema 重新跑 Flink planner，再从 `RelNode` 和 Flink metadata provider 里算出来。
 
+## 评审演示示例：flink21_stats_sink
+
+评审时可以用远端演示环境直接讲这条链路：
+
+```text
+http://106.55.92.13:3001/
+```
+
+演示任务选择 `flink21-transform-demo`，它的目标表是 `flink21_stats_sink`，SQL 如下：
+
+```sql
+INSERT INTO flink21_stats_sink
+SELECT
+    id,
+    UPPER(name),
+    CAST(score / 10 AS BIGINT),
+    DATE_FORMAT(birthday, 'yyyy-MM-dd')
+FROM flink21_users_source
+```
+
+这个例子能展示 4 条字段级血缘：
+
+```text
+flink21_users_source.id       -> flink21_stats_sink.id
+flink21_users_source.name     -> flink21_stats_sink.name_upper       UPPER(name)
+flink21_users_source.score    -> flink21_stats_sink.score_bucket     CAST(score / 10 AS BIGINT)
+flink21_users_source.birthday -> flink21_stats_sink.birthday_day     DATE_FORMAT(birthday, 'yyyy-MM-dd')
+```
+
+### 1. 打开任务列表
+
+打开 `Job` 页面，可以看到当前 Flink 2.1 的 3 个 demo 任务：
+
+```text
+http://106.55.92.13:3001/#/job/list
+```
+
+![Flink 2.1 任务列表](docs/images/flink21-review-01-job-list.png)
+
+### 2. 查看任务 SQL 和字段血缘
+
+点击 `flink21-transform-demo`，进入任务详情页。左侧是原始 SQL，右侧是基于 Flink 2.1 planner replay 算出来的字段级血缘图：
+
+```text
+http://106.55.92.13:3001/#/job/sql/2
+```
+
+如果右侧血缘图为空，可以点击任务页上方的血缘分析按钮，或者直接调用：
+
+```bash
+curl -X POST http://106.55.92.13:3001/tasks/2/lineage
+```
+
+![flink21-transform-demo 字段血缘](docs/images/flink21-review-02-task-lineage.png)
+
+### 3. 查看目标表 schema
+
+进入 `Catalog -> Flink21_memory -> default -> flink21_stats_sink`，可以看到 listener/schema 注册后的目标表字段：
+
+```text
+http://106.55.92.13:3001/#/catalog/1/default/table/flink21_stats_sink
+```
+
+![flink21_stats_sink 表结构](docs/images/flink21-review-03-table-overview.png)
+
+### 4. 查看表级入口的血缘
+
+在同一个表详情页点击 `Lineage`，可以从 Catalog 表入口反查这张表的上下游。这个页面读取的是已经保存的任务血缘；如果某个任务还没分析过，表级入口会先显示空图，不会报错。
+
+![flink21_stats_sink 表级血缘入口](docs/images/flink21-review-04-table-lineage.png)
+
+### 5. 评审时要讲清楚的结论
+
+这个例子说明的是：
+
+```text
+1. 只用 Calcite/Flink parser 只能 parse SQL，拿不到可靠字段血缘。
+2. 字段级血缘需要 schema，schema 可以来自手动录入，也可以来自 Flink 2.1 listener。
+3. 服务端拿到 SQL + schema 后，会注册临时 Catalog/Table，再重新跑 Flink planner。
+4. planner 产生 RelNode，项目再用 Flink metadata 计算 source column -> target column。
+5. 最终结果既能在 Job 维度展示，也能从 Catalog 表维度反查。
+```
+
 ## 模块说明
 
 ```text
