@@ -53,12 +53,12 @@ const Cm = (props) => {
 
   const confirmAddTable = async (params) => {
     try {
-      const {ddl} = params
-      const res = await io.post(`/catalogs/${catalogDetail.catalogId}/databases/${curDatabase || form.getFieldValue('database')}/tables`, {
+      const {ddl, database} = params
+      const res = await io.post(`/catalogs/${catalogDetail.catalogId}/databases/${database}/tables`, {
         ddl,
       })
       res && switchVisible(false)
-      res && onLoadData(curDatabase)
+      res && onLoadData(database)
     } catch (error) {
       message.error(error)
     }
@@ -76,7 +76,15 @@ const Cm = (props) => {
     <Modal
       {...props}
       title={`${type === 'add' ? 'Create' : 'Edit'} Table`}
-      onOk={() => confirmAddTable({ddl: Base64.encode(value), database: form.getFieldValue('database')})}
+      onOk={() => {
+        if (!value) {
+          message.warning('please input ddl')
+          return
+        }
+        form.validateFields().then(values => {
+          confirmAddTable({ddl: Base64.encode(value), database: curDatabase || values.database})
+        })
+      }}
       onCancel={() => {
         props.onCancel()
         type === 'add' && form.resetFields()

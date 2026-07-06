@@ -20,9 +20,11 @@ package com.hw.lineage.server.domain.repository;
 
 import com.hw.lineage.server.domain.entity.Table;
 import com.hw.lineage.server.domain.repository.basic.Repository;
+import com.hw.lineage.server.domain.vo.CatalogId;
 import com.hw.lineage.server.domain.vo.TableId;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * @description: TableRepository
@@ -30,5 +32,9 @@ import java.util.List;
  */
 public interface TableRepository extends Repository<Table, TableId> {
 
+    Optional<Table> find(CatalogId catalogId, String database, String tableName);
+
     List<Table> findMemory();
+
+    void remove(CatalogId catalogId, String database, String tableName);
 }

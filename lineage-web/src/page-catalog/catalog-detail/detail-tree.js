@@ -38,6 +38,8 @@ const Cm = (props) => {
     itemId,
     getCatalogDetail,
     getDatabases,
+    refreshDatabase,
+    refreshVersion,
   } = props
 
   const initExpandedKeys = useMemo(() => [databaseName || catalogDetail.defaultDatabase], [databaseName, catalogDetail.defaultDatabase])
@@ -178,7 +180,9 @@ const Cm = (props) => {
     return optionMap[`${node.oparations}`]
   }
 
-  const onLoadData = ({ key, children }) => {
+  const onLoadData = (node) => {
+    const key = typeof node === 'string' ? node : node.key
+    const children = typeof node === 'string' ? false : node.children
     console.log('----onLoadData----', key)
     return getChildren(key)
     .then((resolve=[], reject) => {
@@ -216,6 +220,12 @@ const Cm = (props) => {
     setExpandedKeys(initExpandedKeys)
     setSelectedKeys(initSelectedKeys)
   }, [databaseName])
+
+  useEffect(() => {
+    if (refreshDatabase && type === 'table') {
+      onLoadData(refreshDatabase)
+    }
+  }, [refreshVersion])
 
   const ModalAddTableProps = {
     visible: addTableVisible,

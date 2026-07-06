@@ -19,6 +19,7 @@
 package com.hw.lineage.server.application.service;
 
 import com.github.pagehelper.PageInfo;
+import com.hw.lineage.common.model.LineageDiagnostic;
 import com.hw.lineage.server.application.command.task.CreateTaskCmd;
 import com.hw.lineage.server.application.command.task.UpdateTaskCmd;
 import com.hw.lineage.server.application.dto.TaskDTO;
@@ -27,6 +28,8 @@ import com.hw.lineage.server.application.dto.TaskSyntaxDTO;
 import com.hw.lineage.server.domain.query.task.TaskCheck;
 import com.hw.lineage.server.domain.query.task.TaskFunctionQuery;
 import com.hw.lineage.server.domain.query.task.TaskQuery;
+
+import java.util.List;
 
 /**
  * @description: TaskService
@@ -51,4 +54,6 @@ public interface TaskService {
     TaskDTO analyzeTaskLineage(Long taskId);
 
     TaskSyntaxDTO checkTaskSyntax(Long taskId);
+
+    List<LineageDiagnostic> diagnoseTaskLineage(Long taskId);
 }

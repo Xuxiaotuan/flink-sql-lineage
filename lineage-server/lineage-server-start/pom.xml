@@ -11,11 +11,6 @@
 
     <artifactId>lineage-server-start</artifactId>
 
-    <properties>
-        <!--for test-->
-        <flink.version>1.16.0</flink.version>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>com.hw.lineage</groupId>

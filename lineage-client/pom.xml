@@ -46,34 +46,6 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <id>plugin-flink1.14.x</id>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                        <phase>compile</phase>
-                        <configuration>
-                            <finalName>plugins</finalName>
-                            <attach>false</attach>
-                            <descriptors>
-                                <descriptor>src/main/assemblies/plugin-flink1.14.x-assembly.xml</descriptor>
-                            </descriptors>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>plugin-flink1.16.x</id>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                        <phase>compile</phase>
-                        <configuration>
-                            <finalName>plugins</finalName>
-                            <attach>false</attach>
-                            <descriptors>
-                                <descriptor>src/main/assemblies/plugin-flink1.16.x-assembly.xml</descriptor>
-                            </descriptors>
-                        </configuration>
-                    </execution>
-                    <execution>
                         <id>plugin-flink2.1.x</id>
                         <goals>
                             <goal>single</goal>

@@ -43,7 +43,7 @@ public class LineageFacadeImplTest extends AbstractSpringBootTest {
     @Resource
     private LineageFacade lineageFacade;
 
-    private static final String[] PLUGIN_NAMES = {"flink1.14.x", "flink1.16.x"};
+    private static final String[] PLUGIN_NAMES = {"flink2.1.x"};
 
     /**
      * There is only one UDF in the Jar package, and only one parameter

@@ -23,6 +23,7 @@ import com.google.common.collect.Lists;
 import com.hw.lineage.common.exception.LineageException;
 import com.hw.lineage.common.model.FunctionInfo;
 import com.hw.lineage.common.model.FunctionResult;
+import com.hw.lineage.common.model.LineageDiagnostic;
 import com.hw.lineage.common.model.LineageResult;
 import com.hw.lineage.common.model.TableInfo;
 import com.hw.lineage.common.service.LineageService;
@@ -128,6 +129,18 @@ public class LineageClient {
     }
 
     /**
+     * Diagnose the planner stages used to produce field lineage.
+     */
+    public LineageDiagnostic diagnoseLineage(String pluginCode, String catalogName, String database,
+            String singleSql) {
+        LineageService service = getLineageService(pluginCode);
+        try (TemporaryClassLoaderContext ignored = TemporaryClassLoaderContext.of(service.getClassLoader())) {
+            service.execute(String.format(USE_DATABASE_SQL, catalogName, database));
+            return service.diagnoseLineage(singleSql);
+        }
+    }
+
+    /**
      * Analyze the custom functions used in this SQL
      */
     public Set<FunctionResult> analyzeFunction(String pluginCode, String catalogName, String database,
@@ -168,6 +181,16 @@ public class LineageClient {
         try (TemporaryClassLoaderContext ignored = TemporaryClassLoaderContext.of(service.getClassLoader())) {
             service.execute(String.format(USE_DATABASE_SQL, catalogName, database));
             service.execute(singleSql);
+        }
+    }
+
+    public String createTable(String pluginCode, String catalogName, String database, String singleSql) {
+        LineageService service = getLineageService(pluginCode);
+        try (TemporaryClassLoaderContext ignored = TemporaryClassLoaderContext.of(service.getClassLoader())) {
+            service.execute(String.format(USE_DATABASE_SQL, catalogName, database));
+            String tableName = service.parseCreateTableName(singleSql);
+            service.execute(singleSql);
+            return tableName;
         }
     }
 

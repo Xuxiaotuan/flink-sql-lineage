@@ -37,7 +37,9 @@ import com.hw.lineage.server.domain.vo.UserId;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 
@@ -62,6 +64,9 @@ public class UserServiceImpl implements UserService {
     @Resource
     private DtoAssembler assembler;
 
+    @Resource
+    private PasswordEncoder passwordEncoder;
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = repository.find(username);
@@ -75,7 +80,7 @@ public class UserServiceImpl implements UserService {
     public Long createUser(CreateUserCmd command) {
         User user = new User()
                 .setUsername(command.getUsername())
-                .setPassword(command.getPassword());
+                .setPassword(passwordEncoder.encode(command.getPassword()));
 
         user.setCreateTime(System.currentTimeMillis())
                 .setModifyTime(System.currentTimeMillis())
@@ -116,7 +121,7 @@ public class UserServiceImpl implements UserService {
         User user = new User()
                 .setUserId(new UserId(command.getUserId()))
                 .setUsername(command.getUsername())
-                .setPassword(command.getPassword())
+                .setPassword(encodePassword(command.getPassword()))
                 .setLocked(command.getLocked());
 
         user.setModifyTime(System.currentTimeMillis());
@@ -141,5 +146,12 @@ public class UserServiceImpl implements UserService {
         }
         // the value is anonymousUser
         return principal.toString();
+    }
+
+    private String encodePassword(String password) {
+        if (!StringUtils.hasText(password)) {
+            return null;
+        }
+        return passwordEncoder.encode(password);
     }
 }

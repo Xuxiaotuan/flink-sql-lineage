@@ -57,10 +57,10 @@ package-lock.json
 data/tmp
 data/storage
 data/logs
+data/run
 
 lineage-web/build/
 lineage-web/node/
 static
 /lineage-server/lineage-server-start/data/
 logs
-yarn.lock

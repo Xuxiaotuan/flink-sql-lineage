@@ -46,7 +46,7 @@ public class PluginMapperTest extends AbstractSpringBootTest {
 
         assertThat(pluginDO).isNotNull();
         assertThat(pluginDO.getPluginId()).isEqualTo(1L);
-        assertThat(pluginDO.getPluginCode()).isEqualTo("flink1.16.x");
-        assertThat(pluginDO.getDescr()).isEqualTo("Field lineage plugin for flink1.16");
+        assertThat(pluginDO.getPluginCode()).isEqualTo("flink2.1.x");
+        assertThat(pluginDO.getDescr()).isEqualTo("Field lineage plugin for flink2.1");
     }
 }

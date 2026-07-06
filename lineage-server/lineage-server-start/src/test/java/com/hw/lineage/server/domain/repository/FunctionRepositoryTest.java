@@ -18,14 +18,8 @@
 
 package com.hw.lineage.server.domain.repository;
 
-import com.github.pagehelper.PageInfo;
 import com.hw.lineage.server.AbstractSpringBootTest;
 import com.hw.lineage.server.domain.entity.Function;
-import com.hw.lineage.server.domain.query.function.FunctionEntry;
-import com.hw.lineage.server.domain.query.function.FunctionTaskQuery;
-import com.hw.lineage.server.domain.query.function.dto.FunctionTaskDTO;
-import com.hw.lineage.server.domain.vo.CatalogId;
-import com.hw.lineage.server.domain.vo.FunctionId;
 
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -49,41 +43,10 @@ public class FunctionRepositoryTest extends AbstractSpringBootTest {
     private FunctionRepository functionRepository;
 
     @Test
-    public void testFindEntry() {
-        FunctionId functionId = new FunctionId(1L);
-        FunctionEntry entry = functionRepository.findEntry(functionId);
-
-        assertThat(entry).isNotNull();
-        assertThat(entry.getPluginCode()).isEqualTo("flink1.16.x");
-        assertThat(entry.getCatalogName()).isEqualTo("Flink16_memory");
-        assertThat(entry.getDatabase()).isEqualTo("default");
-        assertThat(entry.getFunctionId()).isEqualTo(1L);
-        assertThat(entry.getFunctionName()).isEqualTo("my_suffix_udf");
-    }
-
-    @Test
-    public void testFind() {
-        CatalogId catalogId = new CatalogId(1L);
-        Function function = functionRepository.find(catalogId, "default", "my_suffix_udf");
-
-        assertThat(function).isNotNull();
-        assertThat(function.getFunctionId()).isEqualTo(new FunctionId(1L));
-    }
-
-    @Test
     public void testFindMemory() {
         List<Function> functionList = functionRepository.findMemory();
         assertThat(functionList).isNotNull();
         functionList.forEach(function -> LOG.info("memory function: {}", function.toString()));
-        assertThat(functionList).asList().hasSize(3);
-    }
-
-    @Test
-    public void testFindFunctionTasks() {
-        FunctionTaskQuery query = new FunctionTaskQuery();
-        query.setFunctionId(1L);
-        PageInfo<FunctionTaskDTO> pageInfo = functionRepository.findFunctionTasks(query);
-        LOG.info("result: {}", pageInfo);
-        assertThat(pageInfo).isNotNull();
+        assertThat(functionList).asList().isEmpty();
     }
 }

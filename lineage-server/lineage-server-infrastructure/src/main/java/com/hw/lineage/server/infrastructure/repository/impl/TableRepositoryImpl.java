@@ -22,6 +22,7 @@ import com.hw.lineage.common.enums.CatalogType;
 import com.hw.lineage.common.exception.LineageException;
 import com.hw.lineage.server.domain.entity.Table;
 import com.hw.lineage.server.domain.repository.TableRepository;
+import com.hw.lineage.server.domain.vo.CatalogId;
 import com.hw.lineage.server.domain.vo.TableId;
 import com.hw.lineage.server.infrastructure.persistence.converter.DataConverter;
 import com.hw.lineage.server.infrastructure.persistence.dos.TableDO;
@@ -32,11 +33,11 @@ import org.springframework.stereotype.Repository;
 import javax.annotation.Resource;
 
 import java.util.List;
+import java.util.Optional;
 
 import static com.hw.lineage.server.infrastructure.persistence.mapper.CatalogDynamicSqlSupport.catalog;
-import static com.hw.lineage.server.infrastructure.persistence.mapper.TableDynamicSqlSupport.table;
-import static org.mybatis.dynamic.sql.SqlBuilder.equalTo;
-import static org.mybatis.dynamic.sql.SqlBuilder.isEqualToWhenPresent;
+import static com.hw.lineage.server.infrastructure.persistence.mapper.TableDynamicSqlSupport.*;
+import static org.mybatis.dynamic.sql.SqlBuilder.*;
 
 /**
  * @description: TableRepositoryImpl
@@ -60,6 +61,14 @@ public class TableRepositoryImpl extends AbstractBasicRepository implements Tabl
     }
 
     @Override
+    public Optional<Table> find(CatalogId catalogId, String database, String tableName) {
+        return tableMapper.selectOne(completer -> completer.where(table.catalogId, isEqualTo(catalogId.getValue()))
+                .and(table.database, isEqualTo(database))
+                .and(table.tableName, isEqualTo(tableName)))
+                .map(converter::toTable);
+    }
+
+    @Override
     public Table save(Table table) {
         TableDO tableDO = converter.fromTable(table);
         if (tableDO.getTableId() == null) {
@@ -73,6 +82,13 @@ public class TableRepositoryImpl extends AbstractBasicRepository implements Tabl
     @Override
     public void remove(TableId tableId) {
         tableMapper.deleteByPrimaryKey(tableId.getValue());
+    }
+
+    @Override
+    public void remove(CatalogId catalogId, String database, String tableName) {
+        tableMapper.delete(completer -> completer.where(table.catalogId, isEqualTo(catalogId.getValue()))
+                .and(table.database, isEqualTo(database))
+                .and(table.tableName, isEqualTo(tableName)));
     }
 
     @Override

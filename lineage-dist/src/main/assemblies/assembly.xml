@@ -83,10 +83,10 @@
         </fileSet>
 
         <fileSet>
-            <directory>${project.parent.basedir}/lineage-flink1.14.x/target</directory>
-            <outputDirectory>${assembly.name}/plugins/flink1.14.x/</outputDirectory>
+            <directory>${project.parent.basedir}/lineage-flink2.1-listener/target</directory>
+            <outputDirectory>${assembly.name}/lineage-flink2.1-listener/</outputDirectory>
             <includes>
-                <include>*.jar</include>
+                <include>lineage-flink2.1-listener-*.jar</include>
             </includes>
             <excludes>
                 <exclude>*-sources.jar</exclude>
@@ -94,29 +94,26 @@
         </fileSet>
 
         <fileSet>
-            <directory>${project.parent.basedir}/lineage-flink1.14.x/target/lib</directory>
-            <outputDirectory>${assembly.name}/plugins/flink1.14.x/lib/</outputDirectory>
+            <directory>${project.parent.basedir}/lineage-flink2.1-listener/scripts</directory>
+            <outputDirectory>${assembly.name}/lineage-flink2.1-listener/scripts/</outputDirectory>
             <includes>
-                <include>*</include>
+                <include>**</include>
             </includes>
         </fileSet>
 
         <fileSet>
-            <directory>${project.parent.basedir}/lineage-flink1.16.x/target</directory>
-            <outputDirectory>${assembly.name}/plugins/flink1.16.x/</outputDirectory>
+            <directory>${project.parent.basedir}/lineage-flink2.1-listener/sql</directory>
+            <outputDirectory>${assembly.name}/lineage-flink2.1-listener/sql/</outputDirectory>
             <includes>
-                <include>*.jar</include>
+                <include>**</include>
             </includes>
-            <excludes>
-                <exclude>*-sources.jar</exclude>
-            </excludes>
         </fileSet>
 
         <fileSet>
-            <directory>${project.parent.basedir}/lineage-flink1.16.x/target/lib</directory>
-            <outputDirectory>${assembly.name}/plugins/flink1.16.x/lib/</outputDirectory>
+            <directory>${project.parent.basedir}/lineage-flink2.1-listener/docs</directory>
+            <outputDirectory>${assembly.name}/lineage-flink2.1-listener/docs/</outputDirectory>
             <includes>
-                <include>*</include>
+                <include>**</include>
             </includes>
         </fileSet>
 

@@ -115,6 +115,35 @@ public class LineageServiceImpl implements LineageService {
     }
 
     @Override
+    public String parseCreateTableName(String singleSql) {
+        List<Operation> operations = tableEnv.getParser().parse(singleSql);
+        if (operations.size() != 1) {
+            throw new TableException("Unsupported SQL query! only accepts a single SQL statement.");
+        }
+
+        CreateTableOperation createTableOperation = extractCreateTableOperation(operations.get(0));
+        if (createTableOperation == null) {
+            throw new TableException("Only CREATE TABLE DDL is supported when creating schema manually.");
+        }
+        return createTableOperation.getTableIdentifier().getObjectName();
+    }
+
+    private CreateTableOperation extractCreateTableOperation(Operation operation) {
+        if (operation instanceof CreateTableOperation) {
+            return (CreateTableOperation) operation;
+        }
+        try {
+            Object result = operation.getClass().getMethod("getCreateTableOperation").invoke(operation);
+            if (result instanceof CreateTableOperation) {
+                return (CreateTableOperation) result;
+            }
+        } catch (ReflectiveOperationException ignored) {
+            // Not a CTAS-style operation.
+        }
+        return null;
+    }
+
+    @Override
     public Set<FunctionResult> analyzeFunction(String singleSql) {
         LOG.info("Analyze function Sql: \n {}", singleSql);
         ParserImpl parser = (ParserImpl) tableEnv.getParser();
@@ -182,6 +211,60 @@ public class LineageServiceImpl implements LineageService {
 
         // 2. Build lineage based from RelMetadataQuery
         return buildFiledLineageResult(sinkTable, oriRelNode);
+    }
+
+    @Override
+    public LineageDiagnostic diagnoseLineage(String singleSql) {
+        RelMetadataQueryBase.THREAD_PROVIDERS
+                .set(JaninoRelMetadataProvider.of(FlinkDefaultRelMetadataProvider.INSTANCE()));
+
+        LineageDiagnostic diagnostic = new LineageDiagnostic()
+                .setSql(singleSql)
+                .setSuccess(false);
+
+        String currentStage = "parse-validate-convert";
+        try {
+            Operation operation = parseValidateConvert(singleSql);
+            diagnostic
+                    .setOperationType(operation.getClass().getSimpleName())
+                    .addStep(currentStage, "OK", operation.getClass().getSimpleName());
+
+            currentStage = "preprocess-ctas";
+            Operation preprocessed = prePocessCreateTableAsOperation(operation);
+            diagnostic
+                    .setOperationType(preprocessed.getClass().getSimpleName())
+                    .addStep(currentStage, "OK", preprocessed.getClass().getSimpleName());
+
+            currentStage = "extract-rel-node";
+            if (!(preprocessed instanceof SinkModifyOperation)) {
+                throw new TableException("Only insert and CTAS are supported for lineage diagnostics.");
+            }
+
+            SinkModifyOperation sinkOperation = (SinkModifyOperation) preprocessed;
+            PlannerQueryOperation queryOperation = (PlannerQueryOperation) sinkOperation.getChild();
+            RelNode relNode = queryOperation.getCalciteTree();
+            String sinkTable = sinkOperation.getContextResolvedTable().getIdentifier().asSummaryString();
+            diagnostic
+                    .setSinkTable(sinkTable)
+                    .setRelNodeType(relNode.getRelTypeName())
+                    .setTargetColumns(tableEnv.from(sinkTable).getResolvedSchema().getColumnNames())
+                    .addStep(currentStage, "OK", relNode.getRelTypeName());
+
+            currentStage = "validate-schema";
+            validateSchema(sinkTable, relNode, diagnostic.getTargetColumns());
+            diagnostic
+                    .setSuccess(true)
+                    .addStep(currentStage, "OK",
+                            String.format("queryFields=%s, sinkFields=%s",
+                                    relNode.getRowType().getFieldNames(), diagnostic.getTargetColumns()));
+        } catch (Exception e) {
+            diagnostic
+                    .setFailedStage(currentStage)
+                    .setErrorClass(e.getClass().getName())
+                    .setErrorMessage(e.getMessage())
+                    .addStep(currentStage, "FAILED", e.getMessage());
+        }
+        return diagnostic;
     }
 
     private Tuple2<String, RelNode> parseStatement(String singleSql) {

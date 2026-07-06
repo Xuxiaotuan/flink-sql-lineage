@@ -23,12 +23,14 @@ import com.hw.lineage.server.application.service.UserService;
 import com.hw.lineage.server.interfaces.enhanced.EnhancedParametersFilter;
 import com.hw.lineage.server.interfaces.result.Result;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.authentication.*;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.ExpressionUrlAuthorizationConfigurer;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -51,7 +53,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
-    private static final String[] AUTH_WHITE_LIST = {
+    private static final String[] STATIC_WHITE_LIST = {
             // for swagger
             "/swagger-resources/**",
             "/v3/**",
@@ -62,7 +64,10 @@ public class SecurityConfig {
             // fow lineage-web
             "/",
             "/favicon.ico",
-            "/static/**",
+            "/static/**"
+    };
+
+    private static final String[] API_WHITE_LIST = {
             // fow lineage-server
             "/tasks/**",
             "/catalogs/**",
@@ -78,32 +83,33 @@ public class SecurityConfig {
     @Resource
     private UserService userService;
 
+    @Resource
+    private PasswordEncoder passwordEncoder;
+
+    @Value("${lineage.security.permit-all-api:false}")
+    private boolean permitAllApi;
+
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider();
         // override the default UserDetailsService
         authenticationProvider.setUserDetailsService(userService);
-        authenticationProvider.setPasswordEncoder(new PasswordEncoder() {
-
-            @Override
-            public String encode(CharSequence rawPassword) {
-                // unencrypted password
-                return rawPassword.toString();
-            }
-            @Override
-            public boolean matches(CharSequence rawPassword, String encodedPassword) {
-                return rawPassword.toString().equalsIgnoreCase(encodedPassword);
-            }
-        });
+        authenticationProvider.setPasswordEncoder(passwordEncoder);
         return authenticationProvider;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.cors().and().csrf().disable()
-                .authorizeRequests()
-                .antMatchers(AUTH_WHITE_LIST).permitAll()
-                .anyRequest().authenticated()
+        ExpressionUrlAuthorizationConfigurer<HttpSecurity>.ExpressionInterceptUrlRegistry registry =
+                http.cors().and().csrf().disable()
+                        .authorizeRequests()
+                        .antMatchers(STATIC_WHITE_LIST).permitAll();
+
+        if (permitAllApi) {
+            registry.antMatchers(API_WHITE_LIST).permitAll();
+        }
+
+        registry.anyRequest().authenticated()
                 .and()
                 .httpBasic()
                 .and()
@@ -149,4 +155,5 @@ public class SecurityConfig {
             out.flush();
         }
     }
+
 }

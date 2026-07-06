@@ -34,6 +34,7 @@ import com.hw.lineage.server.application.dto.graph.LineageGraph;
 import com.hw.lineage.server.application.service.CatalogService;
 import com.hw.lineage.server.domain.entity.Catalog;
 import com.hw.lineage.server.domain.entity.Plugin;
+import com.hw.lineage.server.domain.entity.Table;
 import com.hw.lineage.server.domain.entity.task.TaskLineage;
 import com.hw.lineage.server.domain.entity.task.TaskSql;
 import com.hw.lineage.server.domain.facade.LineageFacade;
@@ -46,6 +47,7 @@ import com.hw.lineage.server.domain.query.catalog.CatalogEntry;
 import com.hw.lineage.server.domain.query.catalog.CatalogQuery;
 import com.hw.lineage.server.domain.repository.CatalogRepository;
 import com.hw.lineage.server.domain.repository.PluginRepository;
+import com.hw.lineage.server.domain.repository.TableRepository;
 import com.hw.lineage.server.domain.repository.TaskRepository;
 import com.hw.lineage.server.domain.vo.CatalogId;
 import com.hw.lineage.server.domain.vo.PluginId;
@@ -83,6 +85,9 @@ public class CatalogServiceImpl implements CatalogService {
 
     @Resource
     private TaskRepository taskRepository;
+
+    @Resource
+    private TableRepository tableRepository;
 
     @Resource
     private StorageFacade storageFacade;
@@ -201,15 +206,28 @@ public class CatalogServiceImpl implements CatalogService {
 
     @Override
     public void createTable(CreateTableCmd command) {
-        CatalogEntry entry = catalogRepository.findEntry(new CatalogId(command.getCatalogId()));
-        lineageFacade.createTable(entry.getPluginCode(), entry.getCatalogName(), command.getDatabase(),
-                command.getDdl());
+        CatalogId catalogId = new CatalogId(command.getCatalogId());
+        CatalogEntry entry = catalogRepository.findEntry(catalogId);
+        String tableName =
+                lineageFacade.createTable(entry.getPluginCode(), entry.getCatalogName(), command.getDatabase(),
+                        command.getDdl());
+        try {
+            saveManualTable(command, catalogId, tableName);
+        } catch (RuntimeException e) {
+            rollbackCreatedTable(entry, command.getDatabase(), tableName);
+            throw e;
+        }
     }
 
     @Override
     public void deleteTable(Long catalogId, String database, String tableName) throws Exception {
-        CatalogEntry entry = catalogRepository.findEntry(new CatalogId(catalogId));
-        lineageFacade.deleteTable(entry.getPluginCode(), entry.getCatalogName(), database, tableName);
+        CatalogId id = new CatalogId(catalogId);
+        CatalogEntry entry = catalogRepository.findEntry(id);
+        try {
+            lineageFacade.deleteTable(entry.getPluginCode(), entry.getCatalogName(), database, tableName);
+        } finally {
+            tableRepository.remove(id, database, tableName);
+        }
     }
 
     @Override
@@ -285,5 +303,34 @@ public class CatalogServiceImpl implements CatalogService {
         }
         lineageFacade.createCatalog(plugin.getPluginCode(), catalog.getCatalogName(), propertiesMap);
         LOG.info("created catalog: [{}] in plugin: [{}]", catalog.getCatalogName(), plugin.getPluginName());
+    }
+
+    private void saveManualTable(CreateTableCmd command, CatalogId catalogId, String tableName) {
+        long now = System.currentTimeMillis();
+        Table table = tableRepository.find(catalogId, command.getDatabase(), tableName)
+                .orElseGet(() -> {
+                    Table newTable = new Table()
+                            .setCatalogId(catalogId)
+                            .setDatabase(command.getDatabase())
+                            .setTableName(tableName)
+                            .setDescr("manually created table schema");
+                    newTable.setCreateUserId(command.getUserId());
+                    newTable.setCreateTime(now);
+                    return newTable;
+                });
+
+        table.setDdl(command.getDdl())
+                .setInvalid(false);
+        table.setModifyUserId(command.getUserId());
+        table.setModifyTime(now);
+        tableRepository.save(table);
+    }
+
+    private void rollbackCreatedTable(CatalogEntry entry, String database, String tableName) {
+        try {
+            lineageFacade.deleteTable(entry.getPluginCode(), entry.getCatalogName(), database, tableName);
+        } catch (Exception e) {
+            LOG.warn("failed to rollback created table: [{}.{}.{}]", entry.getCatalogName(), database, tableName, e);
+        }
     }
 }

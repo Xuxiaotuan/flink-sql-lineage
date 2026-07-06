@@ -3,13 +3,14 @@ CREATE TABLE `bas_user`
 (
     `user_id`     bigint(20) AUTO_INCREMENT,
     `username`    varchar(64) NOT NULL,
-    `password`    varchar(64) NOT NULL,
+    `password`    varchar(255) NOT NULL,
     `avatar`      text                 DEFAULT NULL,
     `locked`      tinyint(1)  NOT NULL DEFAULT '0',
     `create_time` bigint(20)  NOT NULL,
     `modify_time` bigint(20)  NOT NULL,
     `invalid`     tinyint(1)  NOT NULL DEFAULT '0',
-    PRIMARY KEY (`user_id`)
+    PRIMARY KEY (`user_id`),
+    UNIQUE KEY `uk_bas_user_username` (`username`)
 ) ENGINE = InnoDB
   AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;
@@ -23,7 +24,7 @@ CREATE TABLE `bas_role`
     `modify_time` bigint(20)  NOT NULL,
     `invalid`     tinyint(1)  NOT NULL DEFAULT '0',
     PRIMARY KEY (`role_id`),
-    KEY `role_name_idx` (`role_name`)
+    UNIQUE KEY `uk_bas_role_role_name` (`role_name`)
 ) ENGINE = InnoDB
   AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;
@@ -35,7 +36,9 @@ CREATE TABLE `rel_role_user`
     `role_id` bigint(20) NOT NULL,
     `user_id` bigint(20) NOT NULL,
     `invalid` tinyint(1) NOT NULL DEFAULT '0',
-    PRIMARY KEY (`rid`)
+    PRIMARY KEY (`rid`),
+    UNIQUE KEY `uk_rel_role_user` (`role_id`, `user_id`),
+    KEY `idx_rel_role_user_user_id` (`user_id`)
 ) ENGINE = InnoDB
   AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;
@@ -51,6 +54,7 @@ CREATE TABLE `bas_permission`
     `modify_time`      bigint(20)  NOT NULL,
     `invalid`          tinyint(1)  NOT NULL DEFAULT '0',
     PRIMARY KEY (`permission_id`),
+    UNIQUE KEY `uk_bas_permission_code` (`permission_code`),
     KEY `permission_name_idx` (`permission_name`)
 ) ENGINE = InnoDB
   AUTO_INCREMENT = 1
@@ -63,7 +67,8 @@ CREATE TABLE `rel_role_permission`
     `role_id`       bigint(20) NOT NULL,
     `permission_id` bigint(20) NOT NULL,
     `invalid`       tinyint(1) NOT NULL DEFAULT '0',
-    PRIMARY KEY (`rid`)
+    PRIMARY KEY (`rid`),
+    UNIQUE KEY `uk_rel_role_permission` (`role_id`, `permission_id`)
 ) ENGINE = InnoDB
   AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;
@@ -88,7 +93,8 @@ CREATE TABLE `bas_task`
     `modify_time`    bigint(20)  NOT NULL,
     `invalid`        tinyint(1)  NOT NULL DEFAULT '0',
     PRIMARY KEY (`task_id`),
-    KEY `task_name_idx` (`task_name`)
+    UNIQUE KEY `uk_bas_task_task_name` (`task_name`),
+    KEY `idx_bas_task_catalog_id` (`catalog_id`)
 ) ENGINE = InnoDB
   AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;
@@ -103,7 +109,8 @@ CREATE TABLE `rel_task_sql`
     `start_line_number` bigint(20)           DEFAULT NULL,
     `sql_status`        tinyint(8)  NOT NULL DEFAULT '0',
     `invalid`           tinyint(1)  NOT NULL DEFAULT '0',
-    PRIMARY KEY (`sql_id`)
+    PRIMARY KEY (`sql_id`),
+    KEY `idx_rel_task_sql_task_id` (`task_id`)
 ) ENGINE = InnoDB
   AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;
@@ -144,7 +151,8 @@ CREATE TABLE `bas_plugin`
     `modify_time`    bigint(20)  NOT NULL,
     `invalid`        tinyint(1)  NOT NULL DEFAULT '0',
     PRIMARY KEY (`plugin_id`),
-    KEY `plugin_name_idx` (`plugin_name`)
+    UNIQUE KEY `uk_bas_plugin_name` (`plugin_name`),
+    UNIQUE KEY `uk_bas_plugin_code` (`plugin_code`)
 ) ENGINE = InnoDB
   AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;
@@ -166,7 +174,8 @@ CREATE TABLE `bas_catalog`
     `modify_time`      bigint(20)  NOT NULL,
     `invalid`          tinyint(1)  NOT NULL DEFAULT '0',
     PRIMARY KEY (`catalog_id`),
-    KEY `catalog_name_idx` (`catalog_name`)
+    UNIQUE KEY `uk_bas_catalog_name` (`catalog_name`),
+    KEY `idx_bas_catalog_plugin_id` (`plugin_id`)
 ) ENGINE = InnoDB
   AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;
@@ -185,7 +194,8 @@ CREATE TABLE `bas_table`
     `create_time`    bigint(20)   NOT NULL,
     `modify_time`    bigint(20)   NOT NULL,
     `invalid`        tinyint(1)   NOT NULL DEFAULT '0',
-    PRIMARY KEY (`table_id`)
+    PRIMARY KEY (`table_id`),
+    UNIQUE KEY `uk_bas_table_identity` (`catalog_id`, `database`, `table_name`)
 ) ENGINE = InnoDB
   AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;
@@ -206,7 +216,8 @@ CREATE TABLE `bas_function`
     `create_time`    bigint(20)    NOT NULL,
     `modify_time`    bigint(20)    NOT NULL,
     `invalid`        tinyint(1)    NOT NULL DEFAULT '0',
-    PRIMARY KEY (`function_id`)
+    PRIMARY KEY (`function_id`),
+    UNIQUE KEY `uk_bas_function_identity` (`catalog_id`, `database`, `function_name`)
 ) ENGINE = InnoDB
   AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;
@@ -228,7 +239,8 @@ CREATE TABLE `bas_audit`
     `ip`               varchar(256)         DEFAULT NULL,
     `create_time`      bigint(20)  NOT NULL,
     `invalid`          tinyint(1)  NOT NULL DEFAULT '0',
-    PRIMARY KEY (`audit_id`)
+    PRIMARY KEY (`audit_id`),
+    KEY `idx_bas_audit_create_time` (`create_time`)
 ) ENGINE = InnoDB
   AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;
@@ -245,7 +257,9 @@ CREATE TABLE `rel_task_function`
     `function_name` varchar(64) NOT NULL,
     `create_time`   bigint(20)  NOT NULL,
     `invalid`       tinyint(1)  NOT NULL DEFAULT '0',
-    PRIMARY KEY (`rid`)
+    PRIMARY KEY (`rid`),
+    KEY `idx_rel_task_function_task_id` (`task_id`),
+    KEY `idx_rel_task_function_function_id` (`function_id`)
 ) ENGINE = InnoDB
   AUTO_INCREMENT = 1
   DEFAULT CHARSET = utf8;

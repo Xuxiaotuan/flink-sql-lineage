@@ -19,6 +19,7 @@
 package com.hw.lineage.server.domain.facade;
 
 import com.hw.lineage.common.model.FunctionInfo;
+import com.hw.lineage.common.model.LineageDiagnostic;
 import com.hw.lineage.common.model.TableInfo;
 import com.hw.lineage.server.domain.entity.task.Task;
 
@@ -37,6 +38,8 @@ public interface LineageFacade {
 
     void checkSyntax(String pluginCode, String catalogName, Task task);
 
+    List<LineageDiagnostic> diagnose(String pluginCode, String catalogName, Task task);
+
     List<FunctionInfo> parseFunction(String pluginCode, File file) throws IOException, ClassNotFoundException;
 
     void createCatalog(String pluginCode, String catalogName, Map<String, String> propertiesMap);
@@ -53,7 +56,7 @@ public interface LineageFacade {
 
     void useDatabase(String pluginCode, String catalogName, String database);
 
-    void createTable(String pluginCode, String catalogName, String database, String ddl);
+    String createTable(String pluginCode, String catalogName, String database, String ddl);
 
     List<String> listTables(String pluginCode, String catalogName, String database) throws Exception;
 

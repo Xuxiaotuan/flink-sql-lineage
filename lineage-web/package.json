@@ -2,6 +2,7 @@
   "name": "lineage-web",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "yarn@1.22.22",
   "dependencies": {
     "@ant-design/icons": "^5.0.1",
     "@babel/core": "7.16.0",
@@ -49,6 +50,7 @@
   "scripts": {
     "start": "react-app-rewired start",
     "build": "react-app-rewired build",
+    "check:deps": "yarn check --verify-tree",
     "test": "react-app-rewired test",
     "eject": "react-scripts eject"
   },

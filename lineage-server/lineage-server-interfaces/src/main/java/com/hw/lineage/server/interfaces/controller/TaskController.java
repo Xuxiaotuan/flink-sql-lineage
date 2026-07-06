@@ -19,6 +19,7 @@
 package com.hw.lineage.server.interfaces.controller;
 
 import com.github.pagehelper.PageInfo;
+import com.hw.lineage.common.model.LineageDiagnostic;
 import com.hw.lineage.server.application.command.task.CreateTaskCmd;
 import com.hw.lineage.server.application.command.task.UpdateTaskCmd;
 import com.hw.lineage.server.application.dto.TaskDTO;
@@ -46,6 +47,8 @@ import io.swagger.annotations.Api;
 
 import javax.annotation.Resource;
 import javax.validation.Valid;
+
+import java.util.List;
 
 import static com.hw.lineage.common.enums.audit.ModuleCode.TASK;
 import static com.hw.lineage.common.enums.audit.OperationType.*;
@@ -119,6 +122,14 @@ public class TaskController {
     public Result<TaskSyntaxDTO> checkTaskSyntax(@PathVariable("taskId") Long taskId) {
         TaskSyntaxDTO taskSyntaxDTO = taskService.checkTaskSyntax(taskId);
         return Result.success(ResultMessage.CHECK_SYNTAX_SUCCESS, taskSyntaxDTO);
+    }
+
+    @PostMapping("/{taskId}/diagnostic")
+    @AuditLog(module = TASK, type = QUERY,
+            descr = "'Diagnose Task Lineage: ' + @taskService.queryTask(#taskId).taskName")
+    public Result<List<LineageDiagnostic>> diagnoseTaskLineage(@PathVariable("taskId") Long taskId) {
+        List<LineageDiagnostic> diagnosticList = taskService.diagnoseTaskLineage(taskId);
+        return Result.success(ResultMessage.QUERY_SUCCESS, diagnosticList);
     }
 
     @GetMapping("/{taskId}/functions")

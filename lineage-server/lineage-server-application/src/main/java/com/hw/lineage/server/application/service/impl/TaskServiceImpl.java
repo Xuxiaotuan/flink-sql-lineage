@@ -20,6 +20,7 @@ package com.hw.lineage.server.application.service.impl;
 
 import com.github.pagehelper.PageInfo;
 import com.hw.lineage.common.enums.TaskStatus;
+import com.hw.lineage.common.model.LineageDiagnostic;
 import com.hw.lineage.common.util.PageUtils;
 import com.hw.lineage.server.application.assembler.DtoAssembler;
 import com.hw.lineage.server.application.command.task.CreateTaskCmd;
@@ -191,5 +192,14 @@ public class TaskServiceImpl implements TaskService {
         CatalogEntry entry = catalogRepository.findEntry(task.getCatalogId());
         lineageFacade.checkSyntax(entry.getPluginCode(), entry.getCatalogName(), task);
         return assembler.toTaskSyntaxDTO(task);
+    }
+
+    @Override
+    public List<LineageDiagnostic> diagnoseTaskLineage(Long taskId) {
+        Task task = taskRepository.find(new TaskId(taskId));
+        taskDomainService.generateTaskSql(task);
+
+        CatalogEntry entry = catalogRepository.findEntry(task.getCatalogId());
+        return lineageFacade.diagnose(entry.getPluginCode(), entry.getCatalogName(), task);
     }
 }

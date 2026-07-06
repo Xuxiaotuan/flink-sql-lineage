@@ -23,6 +23,8 @@ const Cm = () => {
   const [curDatabase, setCurDatabase] = useState('')
   const [formValues, setFormValues] = useState([])
   const [functionList, setFunctionList] = useState([])
+  const [refreshDatabase, setRefreshDatabase] = useState('')
+  const [refreshVersion, setRefreshVersion] = useState(0)
 
   // get catalog detail
   const getCatalogDetail = async () => {
@@ -100,6 +102,8 @@ const Cm = () => {
     itemId,
     getCatalogDetail,
     getDatabases,
+    refreshDatabase,
+    refreshVersion,
   }
 
   const DetaiInfoProps = {
@@ -148,7 +152,10 @@ const Cm = () => {
     curDatabase,
     databaseList,
     catalogDetail,
-    // onLoadData,
+    onLoadData: database => {
+      setRefreshDatabase(database)
+      setRefreshVersion(version => version + 1)
+    },
     switchVisible: setAddTableVisible,
     onCancel: () => setAddTableVisible(false),
   }

@@ -19,6 +19,7 @@
 package com.hw.lineage.client;
 
 import com.google.common.collect.ImmutableMap;
+import com.hw.lineage.common.model.LineageDiagnostic;
 import com.hw.lineage.common.model.LineageResult;
 
 import org.junit.BeforeClass;
@@ -29,11 +30,12 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @description: LineageClientTest
@@ -42,8 +44,6 @@ import static org.junit.Assert.assertEquals;
 public class LineageClientTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(LineageClientTest.class);
-
-    private static final String[] PLUGIN_CODES = {"flink1.14.x", "flink1.16.x"};
 
     private static final String FLINK_21_PLUGIN_CODE = "flink2.1.x";
 
@@ -61,16 +61,6 @@ public class LineageClientTest {
                 "type", "generic_in_memory",
                 "default-database", database);
 
-        Stream.of(PLUGIN_CODES).forEach(pluginCode -> {
-            client.createCatalog(pluginCode, catalogName, propertiesMap);
-
-            client.useCatalog(pluginCode, catalogName);
-            // create mysql cdc table ods_mysql_users
-            createTableOfOdsMysqlUsers(pluginCode);
-            // create hudi sink table dwd_hudi_users
-            createTableOfDwdHudiUsers(pluginCode);
-        });
-
         client.createCatalog(FLINK_21_PLUGIN_CODE, catalogName, propertiesMap);
         client.useCatalog(FLINK_21_PLUGIN_CODE, catalogName);
         createTableOfFlink21Source(FLINK_21_PLUGIN_CODE);
@@ -79,11 +69,6 @@ public class LineageClientTest {
         createTableOfFlink21CompanySource(FLINK_21_PLUGIN_CODE);
         createTableOfFlink21UsersSink(FLINK_21_PLUGIN_CODE);
         createTableOfFlink21StatsSink(FLINK_21_PLUGIN_CODE);
-    }
-
-    @Test
-    public void testInsertSelect() {
-        Stream.of(PLUGIN_CODES).forEach(this::testInsertSelect);
     }
 
     @Test
@@ -180,28 +165,61 @@ public class LineageClientTest {
         analyzeLineage(FLINK_21_PLUGIN_CODE, sql, expectedArray);
     }
 
-    private void testInsertSelect(String pluginCode) {
-        String sql = "INSERT INTO dwd_hudi_users " +
+    @Test
+    public void testFlink21CreateTableAsSelectDemo() {
+        client.execute(FLINK_21_PLUGIN_CODE, catalogName, database, "DROP TABLE IF EXISTS flink21_ctas_sink");
+
+        String sql = "CREATE TABLE flink21_ctas_sink " +
+                "WITH ('connector' = 'blackhole') AS " +
                 "SELECT " +
                 "   id ," +
-                "   name ," +
-                "   name as company_name ," +
-                "   birthday ," +
-                "   ts ," +
-                "   DATE_FORMAT(birthday, 'yyyyMMdd') " +
-                "FROM" +
-                "   ods_mysql_users";
+                "   UPPER(name) AS name_upper ," +
+                "   DATE_FORMAT(birthday, 'yyyyMMdd') AS partition_day " +
+                "FROM flink21_users_source";
 
         String[][] expectedArray = {
-                {"ods_mysql_users", "id", "dwd_hudi_users", "id"},
-                {"ods_mysql_users", "name", "dwd_hudi_users", "name"},
-                {"ods_mysql_users", "name", "dwd_hudi_users", "company_name"},
-                {"ods_mysql_users", "birthday", "dwd_hudi_users", "birthday"},
-                {"ods_mysql_users", "ts", "dwd_hudi_users", "ts"},
-                {"ods_mysql_users", "birthday", "dwd_hudi_users", "partition", "DATE_FORMAT(birthday, 'yyyyMMdd')"}
+                {"flink21_users_source", "id", "flink21_ctas_sink", "id"},
+                {"flink21_users_source", "name", "flink21_ctas_sink", "name_upper", "UPPER(name)"},
+                {"flink21_users_source", "birthday", "flink21_ctas_sink", "partition_day",
+                        "DATE_FORMAT(birthday, 'yyyyMMdd')"}
         };
 
-        analyzeLineage(pluginCode, sql, expectedArray);
+        analyzeLineage(FLINK_21_PLUGIN_CODE, sql, expectedArray);
+    }
+
+    @Test
+    public void testFlink21LineageDiagnosticSuccess() {
+        String sql = "INSERT INTO flink21_stats_sink " +
+                "SELECT " +
+                "   id ," +
+                "   UPPER(name) ," +
+                "   CAST(score / 10 AS BIGINT) ," +
+                "   DATE_FORMAT(birthday, 'yyyy-MM-dd') " +
+                "FROM flink21_users_source";
+
+        LineageDiagnostic diagnostic = client.diagnoseLineage(FLINK_21_PLUGIN_CODE, catalogName, database, sql);
+
+        assertTrue(diagnostic.toString(), diagnostic.isSuccess());
+        assertEquals("SinkModifyOperation", diagnostic.getOperationType());
+        assertEquals("memory_catalog.lineage_db.flink21_stats_sink", diagnostic.getSinkTable());
+        assertTrue(diagnostic.getRelNodeType().contains("Logical"));
+        assertEquals(4, diagnostic.getTargetColumns().size());
+        assertEquals("parse-validate-convert", diagnostic.getSteps().get(0).getStage());
+        assertEquals("OK", diagnostic.getSteps().get(0).getStatus());
+    }
+
+    @Test
+    public void testFlink21LineageDiagnosticReportsMissingSchema() {
+        String sql = "INSERT INTO flink21_stats_sink " +
+                "SELECT id, name, score, birthday " +
+                "FROM missing_users_source";
+
+        LineageDiagnostic diagnostic = client.diagnoseLineage(FLINK_21_PLUGIN_CODE, catalogName, database, sql);
+
+        assertFalse(diagnostic.isSuccess());
+        assertEquals("parse-validate-convert", diagnostic.getFailedStage());
+        assertTrue(diagnostic.getErrorMessage().contains("missing_users_source"));
+        assertEquals("FAILED", diagnostic.getSteps().get(0).getStatus());
     }
 
     private void analyzeLineage(String pluginCode, String sql, String[][] expectedArray) {
@@ -211,51 +229,6 @@ public class LineageClientTest {
 
         List<LineageResult> expectedList = LineageResult.buildResult(catalogName, database, expectedArray);
         assertEquals(expectedList, actualList);
-    }
-
-    /**
-     * Create mysql cdc table ods_mysql_users
-     */
-    private static void createTableOfOdsMysqlUsers(String pluginCode) {
-        client.execute(pluginCode, "DROP TABLE IF EXISTS ods_mysql_users ");
-
-        client.execute(pluginCode, "CREATE TABLE IF NOT EXISTS ods_mysql_users (" +
-                "       id                  BIGINT PRIMARY KEY NOT ENFORCED ," +
-                "       name                STRING                          ," +
-                "       birthday            TIMESTAMP(3)                    ," +
-                "       ts                  TIMESTAMP(3)                    ," +
-                "       proc_time as proctime()                              " +
-                ") WITH ( " +
-                "       'connector' = 'mysql-cdc'            ," +
-                "       'hostname'  = '127.0.0.1'       ," +
-                "       'port'      = '3306'                 ," +
-                "       'username'  = 'root'                 ," +
-                "       'password'  = 'xxx'          ," +
-                "       'server-time-zone' = 'Asia/Shanghai' ," +
-                "       'database-name' = 'demo'             ," +
-                "       'table-name'    = 'users' " +
-                ")");
-    }
-
-    /**
-     * Create Hudi sink table dwd_hudi_users
-     */
-    private static void createTableOfDwdHudiUsers(String pluginCode) {
-        client.execute(pluginCode, "DROP TABLE IF EXISTS dwd_hudi_users");
-
-        client.execute(pluginCode, "CREATE TABLE IF NOT EXISTS  dwd_hudi_users ( " +
-                "       id                  BIGINT PRIMARY KEY NOT ENFORCED ," +
-                "       name                STRING                          ," +
-                "       company_name        STRING                          ," +
-                "       birthday            TIMESTAMP(3)                    ," +
-                "       ts                  TIMESTAMP(3)                    ," +
-                "        `partition`        VARCHAR(20)                      " +
-                ") PARTITIONED BY (`partition`) WITH ( " +
-                "       'connector' = 'hudi'                                    ," +
-                "       'table.type' = 'COPY_ON_WRITE'                          ," +
-                "       'read.streaming.enabled' = 'true'                       ," +
-                "       'read.streaming.check-interval' = '1'                    " +
-                ")");
     }
 
     private static void createTableOfFlink21Source(String pluginCode) {

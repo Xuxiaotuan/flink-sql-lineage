@@ -20,6 +20,7 @@ package com.hw.lineage.common.service;
 
 import com.hw.lineage.common.model.FunctionInfo;
 import com.hw.lineage.common.model.FunctionResult;
+import com.hw.lineage.common.model.LineageDiagnostic;
 import com.hw.lineage.common.model.LineageResult;
 import com.hw.lineage.common.model.TableInfo;
 import com.hw.lineage.common.plugin.Plugin;
@@ -41,6 +42,11 @@ public interface LineageService extends Plugin {
     List<LineageResult> analyzeLineage(String singleSql);
 
     /**
+     * Diagnose the planner stages used to produce field lineage.
+     */
+    LineageDiagnostic diagnoseLineage(String singleSql);
+
+    /**
      *  Perform Parse and validate operations on SQL
      */
     void parseValidate(String singleSql);
@@ -49,6 +55,11 @@ public interface LineageService extends Plugin {
      * Execute the single sql
      */
     void execute(String singleSql);
+
+    /**
+     * Parse a CREATE TABLE statement and return the registered table name.
+     */
+    String parseCreateTableName(String singleSql);
 
     /**
      * Analyze the custom functions used in this SQL

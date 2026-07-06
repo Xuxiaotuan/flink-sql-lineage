@@ -23,19 +23,13 @@
 
         <dependency>
             <groupId>com.hw.lineage</groupId>
-            <artifactId>lineage-flink1.14.x</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.hw.lineage</groupId>
-            <artifactId>lineage-flink1.16.x</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.hw.lineage</groupId>
             <artifactId>lineage-flink2.1.x</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.hw.lineage</groupId>
+            <artifactId>lineage-flink2.1-listener</artifactId>
             <version>${project.version}</version>
         </dependency>
 

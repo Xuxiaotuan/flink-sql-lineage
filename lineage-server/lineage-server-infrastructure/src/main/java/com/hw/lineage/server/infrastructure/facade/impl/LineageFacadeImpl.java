@@ -24,6 +24,7 @@ import com.hw.lineage.common.enums.TaskStatus;
 import com.hw.lineage.common.exception.LineageException;
 import com.hw.lineage.common.model.FunctionInfo;
 import com.hw.lineage.common.model.FunctionResult;
+import com.hw.lineage.common.model.LineageDiagnostic;
 import com.hw.lineage.common.model.LineageResult;
 import com.hw.lineage.common.model.TableInfo;
 import com.hw.lineage.common.supplier.CustomSupplier;
@@ -47,6 +48,7 @@ import javax.annotation.Resource;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -136,6 +138,86 @@ public class LineageFacadeImpl implements LineageFacade {
                 parseValidate(pluginCode, catalogName, task, taskSql, singleSql);
             }
         });
+    }
+
+    @Override
+    public List<LineageDiagnostic> diagnose(String pluginCode, String catalogName, Task task) {
+        List<LineageDiagnostic> diagnosticList = new ArrayList<>();
+        long sqlId = 1L;
+        for (TaskSql taskSql : task.getTaskSqlList()) {
+            taskSql.setSqlId(new SqlId(sqlId++));
+            String singleSql = Base64Utils.decode(taskSql.getSqlSource());
+            LineageDiagnostic diagnostic;
+            switch (taskSql.getSqlType()) {
+                case INSERT:
+                    diagnostic = diagnoseLineage(pluginCode, catalogName, task, singleSql);
+                    break;
+                case CREATE:
+                    if (ctas(singleSql)) {
+                        diagnostic = diagnoseLineage(pluginCode, catalogName, task, singleSql);
+                    } else {
+                        diagnostic = diagnoseExecute(pluginCode, catalogName, task, singleSql);
+                    }
+                    break;
+                case DROP:
+                case ALTER:
+                case USE:
+                case LOAD:
+                case UNLOAD:
+                case SET:
+                case RESET:
+                case JAR:
+                    diagnostic = diagnoseExecute(pluginCode, catalogName, task, singleSql);
+                    break;
+                default:
+                    diagnostic = new LineageDiagnostic()
+                            .setSql(singleSql)
+                            .setSuccess(false)
+                            .setFailedStage("classify-sql")
+                            .setErrorClass(LineageException.class.getName())
+                            .setErrorMessage(ILLEGAL_PARAM)
+                            .addStep("classify-sql", "FAILED", ILLEGAL_PARAM);
+                    break;
+            }
+            diagnostic
+                    .setSqlId(taskSql.getSqlId().getValue())
+                    .setSqlType(taskSql.getSqlType().value())
+                    .setStartLineNumber(taskSql.getStartLineNumber());
+            diagnosticList.add(diagnostic);
+        }
+        return diagnosticList;
+    }
+
+    private LineageDiagnostic diagnoseLineage(String pluginCode, String catalogName, Task task, String singleSql) {
+        try {
+            return lineageClient.diagnoseLineage(pluginCode, catalogName, task.getDatabase(), singleSql);
+        } catch (Exception e) {
+            return new LineageDiagnostic()
+                    .setSql(singleSql)
+                    .setSuccess(false)
+                    .setFailedStage("prepare-database")
+                    .setErrorClass(e.getClass().getName())
+                    .setErrorMessage(e.getMessage())
+                    .addStep("prepare-database", "FAILED", e.getMessage());
+        }
+    }
+
+    private LineageDiagnostic diagnoseExecute(String pluginCode, String catalogName, Task task, String singleSql) {
+        LineageDiagnostic diagnostic = new LineageDiagnostic().setSql(singleSql);
+        try {
+            lineageClient.execute(pluginCode, catalogName, task.getDatabase(), singleSql);
+            return diagnostic
+                    .setSuccess(true)
+                    .setOperationType("ExecuteOperation")
+                    .addStep("execute", "OK", "SQL executed for diagnostic context.");
+        } catch (Exception e) {
+            return diagnostic
+                    .setSuccess(false)
+                    .setFailedStage("execute")
+                    .setErrorClass(e.getClass().getName())
+                    .setErrorMessage(e.getMessage())
+                    .addStep("execute", "FAILED", e.getMessage());
+        }
     }
 
     private void doProcessTask(Task task, CustomSupplier supplier) {
@@ -260,9 +342,9 @@ public class LineageFacadeImpl implements LineageFacade {
     }
 
     @Override
-    public void createTable(String pluginCode, String catalogName, String database, String ddl) {
+    public String createTable(String pluginCode, String catalogName, String database, String ddl) {
         String singleSql = Base64Utils.decode(ddl);
-        lineageClient.execute(pluginCode, catalogName, database, singleSql);
+        return lineageClient.createTable(pluginCode, catalogName, database, singleSql);
     }
 
     @Override
