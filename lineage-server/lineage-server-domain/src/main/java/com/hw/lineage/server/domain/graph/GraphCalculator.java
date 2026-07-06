@@ -56,22 +56,38 @@ public class GraphCalculator<N extends Node, E extends Edge<N>> {
                 .collect(Collectors.toSet());
 
         startSet.forEach(this::searchChildrenSet);
-        graph.queryNodeSet().forEach(node -> node.setChildrenCnt(childrenMap.get(node.getNodeId()).size()));
+        graph.queryNodeSet().forEach(node -> {
+            if (!childrenMap.containsKey(node.getNodeId())) {
+                searchChildrenSet(node);
+            }
+            node.setChildrenCnt(childrenMap.getOrDefault(node.getNodeId(), Collections.emptySet()).size());
+        });
     }
 
     private void searchChildrenSet(N node) {
+        if (node == null) {
+            return;
+        }
         Integer nodeId = node.getNodeId();
+        if (childrenMap.containsKey(nodeId)) {
+            return;
+        }
         visitIdSet.add(nodeId);
         if (node.getChildIdSet().isEmpty()) {
             childrenMap.put(nodeId, Collections.emptySet());
+            return;
         }
         Set<Integer> childrenSet = new HashSet<>();
         for (Integer childId : node.getChildIdSet()) {
+            N childNode = nodeIdMap.get(childId);
+            if (childNode == null) {
+                continue;
+            }
             if (!visitIdSet.contains(childId)) {
-                searchChildrenSet(nodeIdMap.get(childId));
+                searchChildrenSet(childNode);
             }
             childrenSet.add(childId);
-            childrenSet.addAll(childrenMap.get(childId));
+            childrenSet.addAll(childrenMap.getOrDefault(childId, Collections.emptySet()));
         }
         childrenMap.put(nodeId, childrenSet);
     }

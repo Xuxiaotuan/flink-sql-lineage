@@ -314,9 +314,10 @@ const Cm = (props) => {
     try {
       const res = await io.get(`/catalogs/${catalogId}/databases/${databaseName}/tables/${tableName}/lineage`)
       console.log('getTableInfos---111', res)
-      setData(res)
+      setData(res?.nodes && res?.links ? res : {nodes: [], links: []})
     } catch (error) {
       message.error(error)
+      setData({nodes: [], links: []})
     }
   }
   useEffect(() => {

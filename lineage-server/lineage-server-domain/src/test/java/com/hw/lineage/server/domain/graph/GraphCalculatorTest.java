@@ -122,4 +122,19 @@ public class GraphCalculatorTest {
         assertThat(node7.getChildrenCnt()).isEqualTo(1);
         assertThat(node8.getChildrenCnt()).isZero();
     }
+
+    @Test
+    public void testComputeChildrenCntWithFilteredGraph() {
+        Graph<Node, Edge<Node>> graph = new Graph<>();
+
+        Node node1 = new Node(1, "node1");
+        node1.getChildIdSet().add(2);
+        graph.addNode(node1.getNodeName(), node1);
+
+        GraphCalculator<Node, Edge<Node>> calculator = new GraphCalculator<>(graph);
+        calculator.calculateChildrenCnt();
+
+        assertEquals(ImmutableSet.of(), calculator.getChildrenMap().get(1));
+        assertThat(node1.getChildrenCnt()).isZero();
+    }
 }
