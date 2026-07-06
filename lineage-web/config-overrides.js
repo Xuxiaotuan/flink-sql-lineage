@@ -37,26 +37,14 @@ const stylus = () => config => {
 
 module.exports = {
   webpack: override(
-    // usual webpack plugin
     disableEsLint(),
     stylus(),
-    useBabelRc(), 
+    useBabelRc(),
     addWebpackAlias({
       '@common': path.resolve(__dirname, './src/common')
-    }),
-    config => {
-      const babelLoader = {
-        test: /\.jsx?/,
-        exclude: /node_modules/,
-        use: ["babel-loader"],
-      }
-      const oneOf = config.module.rules.find(rule => rule.oneOf).oneOf
-      oneOf.unshift(babelLoader)
-      return config
-    }
+    })
   ),
   devServer: overrideDevServer(
-    // dev server plugin
     watchAll(),
     () => {
       return  {
