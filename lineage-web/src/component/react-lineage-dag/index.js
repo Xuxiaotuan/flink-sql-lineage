@@ -1,7 +1,4 @@
-const lineageDagBundle = require('./bundle');
-
-const LineageDag = lineageDagBundle.default || lineageDagBundle;
-const LineageTable = lineageDagBundle.LineageTable;
+import LineageDag, { LineageTable } from './bundle';
 
 export {LineageTable};
 export default LineageDag;

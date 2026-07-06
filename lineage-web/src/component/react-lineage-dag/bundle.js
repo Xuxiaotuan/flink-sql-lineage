@@ -1,7 +1,5 @@
 'use strict';
 
-Object.defineProperty(exports, '__esModule', { value: true });
-
 var React = require('react');
 var _ = require('lodash');
 var PropTypes = require('prop-types');
@@ -15738,5 +15736,5 @@ Table.propTypes = {
 
 var LineageTable = Table;
 
-exports.LineageTable = LineageTable;
-exports["default"] = LineageDag;
+export { LineageTable };
+export default LineageDag;

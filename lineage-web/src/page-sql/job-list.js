@@ -240,7 +240,7 @@ const Cm = () => {
     const {list} = res.data.data
     setDataSource(list)
     // if url from login
-    if(location.state.pageUrl === 'login') {
+    if(location.state?.pageUrl === 'login' && list?.[0]?.taskId) {
       navigation(`/job/sql/${list[0].taskId}`)
     }
   }
