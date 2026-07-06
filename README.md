@@ -2,20 +2,27 @@
 
 ```mermaid
 flowchart LR
-    A["K8s / Flink 2.1 SQL 任务"] --> B["Flink JobStatusChangedListener"]
-    B --> C["JobCreatedEvent#lineageGraph()"]
-    C --> D["提取 inputs / outputs / schema / connector options"]
-    D --> E{"是否配置 collector.url"}
-    E -->|是| F["POST /lineage-events/flink2.1"]
-    E -->|否| G["写入 /tmp/flink21-lineage-events.jsonl"]
-    G --> H["本地回放脚本"]
-    F --> I["生成临时 CREATE TABLE DDL"]
-    H --> I
-    I --> J["注册到 flink-sql-lineage Flink 2.1 Catalog"]
-    J --> K["创建任务并写入 Flink SQL"]
-    K --> L["lineage-flink2.1.x 重新跑 Flink Planner"]
-    L --> M["RelNode + Flink RelMetadataQuery"]
-    M --> N["字段级血缘图"]
+    A["本地 / K8s 提交 Flink SQL"] --> B["Flink 2.1 作业启动"]
+    A --> S["SQL 来源"]
+    S --> S1["实验模式: lineage.collector.sql-file"]
+    S --> S2["生产模式: SQL 发布系统按 jobId/jobName 补齐"]
+    B --> C["Flink JobStatusChangedListener"]
+    C --> D["JobCreatedEvent#lineageGraph()"]
+    D --> E["提取 inputs / outputs / schema / connector options"]
+    E --> F["Listener event"]
+    S1 --> F
+    S2 --> F
+    F --> G{"是否配置 collector.url"}
+    G -->|是| H["POST /lineage-events/flink2.1"]
+    G -->|否| I["写入 /tmp/flink21-lineage-events.jsonl"]
+    I --> J["本地回放脚本补 SQL"]
+    H --> K["生成临时 CREATE TABLE DDL"]
+    J --> K
+    K --> L["注册到 flink-sql-lineage Flink 2.1 Catalog"]
+    L --> M["创建任务并写入 Flink SQL"]
+    M --> N["lineage-flink2.1.x 重新跑 Flink Planner"]
+    N --> O["RelNode + Flink RelMetadataQuery"]
+    O --> P["字段级血缘图"]
 ```
 
 ## 这个项目现在解决什么问题
@@ -27,6 +34,166 @@ SQL + listener schema -> flink-sql-lineage 重新跑 Flink Planner -> 字段级�
 ```
 
 这里最关键的一点是：**Flink listener 不直接产出字段级血缘**。Flink 2.x 原生 lineage API 给的是运行时数据集、表级关系和 schema 上下文。字段级血缘仍然要让 `flink-sql-lineage` 用相同 schema 重新跑 Flink planner，再从 `RelNode` 和 Flink metadata provider 里算出来。
+
+## SQL 是怎么传过去的
+
+这一点评审时一定要讲清楚：**Flink 2.1 listener 负责拿 schema，不负责可靠地还原原始 SQL**。
+
+Flink 2.1 的 `JobCreatedEvent#lineageGraph()` 能拿到：
+
+```text
+jobId / jobName
+inputs / outputs
+source table schema
+sink table schema
+connector options
+source -> sink 的表级关系
+```
+
+但字段级血缘 replay 还需要原始 `INSERT SQL`。所以当前设计把 SQL 当成另一条输入：
+
+```text
+schema 来自 Flink listener
+SQL 来自提交系统 / 配置文件 / 回放脚本
+schema + SQL 一起进入 flink-sql-lineage collector
+```
+
+### 本地实验里 SQL 怎么传
+
+本地实验通过 Flink 配置把 SQL 文件路径传给 listener：
+
+```yaml
+execution.job-status-changed-listeners: com.hw.lineage.flink.listener.Flink21LineageListenerFactory
+lineage.collector.url: http://127.0.0.1:8194/lineage-events/flink2.1
+lineage.collector.catalog-id: 1
+lineage.collector.database: default
+lineage.collector.sql-file: /Users/xujiawei/magic/workbench/flink-sql-lineage/lineage-flink2.1-listener/sql/listener-insert.sql
+```
+
+代码位置：
+
+```text
+lineage-flink2.1-listener/src/main/java/com/hw/lineage/flink/listener/Flink21LineageListenerFactory.java
+```
+
+listener 启动时会读取：
+
+```text
+lineage.collector.sql
+lineage.collector.sql-file
+```
+
+如果 `lineage.collector.sql` 为空，就读取 `lineage.collector.sql-file`。随后在 `JobCreatedEvent` 到来时，它把 SQL 塞进同一个 JSON payload：
+
+```json
+{
+  "eventType": "JobCreatedEvent",
+  "jobId": "...",
+  "jobName": "...",
+  "catalogId": 1,
+  "database": "default",
+  "sql": "INSERT INTO flink21_stats_sink SELECT ...",
+  "inputs": [
+    {
+      "name": "Flink21_memory.default.flink21_users_source",
+      "schema": [
+        {"name": "id", "type": "BIGINT"},
+        {"name": "name", "type": "STRING"}
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "name": "Flink21_memory.default.flink21_stats_sink",
+      "schema": [
+        {"name": "id", "type": "BIGINT"},
+        {"name": "name_upper", "type": "STRING"}
+      ]
+    }
+  ]
+}
+```
+
+然后 listener 直接发给：
+
+```text
+POST /lineage-events/flink2.1
+```
+
+如果没有配置 `lineage.collector.url`，listener 只把同样的事件写入：
+
+```text
+/tmp/flink21-lineage-events.jsonl
+```
+
+这时由本地回放脚本读取 JSONL 里的 schema，再读取 `listener-insert.sql`，组合后调用后端接口：
+
+```text
+lineage-flink2.1-listener/scripts/06_回放到血缘服务.py
+```
+
+### 服务端收到后怎么走下一步
+
+服务端入口：
+
+```text
+POST /lineage-events/flink2.1
+```
+
+核心实现：
+
+```text
+lineage-server/lineage-server-application/src/main/java/com/hw/lineage/server/application/service/impl/LineageCollectServiceImpl.java
+```
+
+服务端收到 payload 后做 4 件事：
+
+```text
+1. 从 inputs / outputs 的 schema 生成 CREATE TABLE IF NOT EXISTS DDL
+2. 调用 CatalogService.createTable，把 source/sink 表注册到 Flink21_memory catalog
+3. 创建 task，把 payload.sql Base64 后写入 task_source
+4. 调用 analyzeTaskLineage(taskId)，重新跑 Flink 2.1 planner，生成字段级血缘
+```
+
+也就是：
+
+```text
+listener event schema
+  -> CREATE TABLE
+
+payload.sql
+  -> task_source
+  -> /tasks/{taskId}/lineage
+  -> Flink planner replay
+```
+
+### 生产环境建议怎么传 SQL
+
+生产上不要依赖 Flink listener 自己“猜 SQL”。更稳的方式是接入你们的 Flink SQL 发布系统：
+
+```mermaid
+flowchart LR
+    A["SQL 发布系统"] --> B["保存 SQL、jobName、业务任务 id"]
+    B --> C["提交 Flink SQL 到 K8s"]
+    C --> D["Flink listener 监听 JobCreatedEvent"]
+    D --> E["拿到 jobId、jobName、inputs、outputs、schema"]
+    E --> F["collector"]
+    B --> F
+    F --> G["按 jobId/jobName/业务任务 id 合并 SQL + schema"]
+    G --> H["注册临时表 + planner replay"]
+    H --> I["字段级血缘"]
+```
+
+推荐落地方式：
+
+```text
+1. 发布系统提交 SQL 前，先保存 SQL、jobName、业务任务 id。
+2. Flink listener 上报 jobId、jobName、schema、inputs、outputs。
+3. collector 按 jobName 或业务任务 id 找到原始 SQL。
+4. collector 调用 flink-sql-lineage 的 collector/analyze 流程。
+```
+
+这样 SQL 来源清晰，也能解决一个 Flink 作业里 SQL 太长、SQL 被平台改写、或者 SQL 不适合放进 Flink config 的问题。
 
 ## 评审演示示例：flink21_stats_sink
 
