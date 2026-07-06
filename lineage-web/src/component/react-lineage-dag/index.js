@@ -1,4 +1,4 @@
-const lineageDagBundle = require('./bundle.cjs');
+const lineageDagBundle = require('./bundle');
 
 const LineageDag = lineageDagBundle.default || lineageDagBundle;
 const LineageTable = lineageDagBundle.LineageTable;
