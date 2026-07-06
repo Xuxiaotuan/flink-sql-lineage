@@ -46,6 +46,9 @@ public class GraphHelper {
 
     public TableGraph filter(TableGraph tableGraph, String nodeName) {
         TableNode currentNode = tableGraph.queryNode(nodeName);
+        if (currentNode == null) {
+            return new TableGraph();
+        }
         Set<TableNode> resultSet = new HashSet<>();
         resultSet.add(currentNode);
 
@@ -68,16 +71,28 @@ public class GraphHelper {
     }
 
     private void searchParents(Map<Integer, TableNode> nodeIdMap, TableNode currentNode, Set<TableNode> nodeSet) {
+        if (currentNode == null) {
+            return;
+        }
         for (Integer parentId : currentNode.getParentIdSet()) {
             TableNode parentNode = nodeIdMap.get(parentId);
+            if (parentNode == null || nodeSet.contains(parentNode)) {
+                continue;
+            }
             nodeSet.add(parentNode);
             searchParents(nodeIdMap, parentNode, nodeSet);
         }
     }
 
     private void searchChildren(Map<Integer, TableNode> nodeIdMap, TableNode currentNode, Set<TableNode> nodeSet) {
+        if (currentNode == null) {
+            return;
+        }
         for (Integer childId : currentNode.getChildIdSet()) {
             TableNode childNode = nodeIdMap.get(childId);
+            if (childNode == null || nodeSet.contains(childNode)) {
+                continue;
+            }
             nodeSet.add(childNode);
             searchChildren(nodeIdMap, childNode, nodeSet);
         }
