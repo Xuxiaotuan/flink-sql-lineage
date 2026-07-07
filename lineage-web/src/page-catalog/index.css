@@ -1,11 +1,19 @@
 .catalog-list {
   height: 600px;
   overflow: scroll;
+  padding-right: 4px;
 }
 .list-item:hover {
-  box-shadow: 0 2px 5px #eee;
-  border: 1px solid #2f77ff;
+  background: rgba(0, 217, 146, .06);
+  border: 1px solid rgba(0, 217, 146, .42);
+  box-shadow: none;
   cursor: pointer;
+}
+.list-item {
+  background: var(--lineage-surface);
+  border-color: var(--lineage-hairline) !important;
+  color: var(--lineage-body);
+  transition: background .16s ease, border-color .16s ease;
 }
 .list-item .item-logo {
   width: 30px;
@@ -29,16 +37,51 @@
 .item-content .item-info{
   width: 100%;
   line-height: 30px;
-  color: #666;
+  color: var(--lineage-muted);
   font-size: 14px;
   padding-right: 10px;
+}
+
+.catalog-top-bar {
+  color: var(--lineage-body);
+}
+
+.catalog-list .ant-tag {
+  border-color: rgba(0, 217, 146, .38);
+  color: var(--lineage-accent);
+  background: rgba(0, 217, 146, .08);
 }
 
 /* detail css */
         
 .left-tree {
   width: 270px;
+  background: var(--lineage-surface);
 }
 .left-tree-box {
-  border-right: 1px solid #ddd;
+  border-right: 1px solid var(--lineage-hairline-soft);
+  background: var(--lineage-surface);
+  min-height: calc(100vh - 114px);
+}
+
+.left-tree-box + .white-bg {
+  background: var(--lineage-canvas-soft);
+}
+
+.left-tree-box .ant-tree {
+  background: transparent;
+  color: var(--lineage-body);
+}
+
+.left-tree-box .ant-tree .ant-tree-node-content-wrapper {
+  border-radius: 6px;
+}
+
+.left-tree-box .ant-tree .ant-tree-node-content-wrapper:hover {
+  background: rgba(0, 217, 146, .08);
+}
+
+.left-tree-box .ant-tree .ant-tree-node-selected {
+  background: rgba(0, 217, 146, .14) !important;
+  color: var(--lineage-accent);
 }

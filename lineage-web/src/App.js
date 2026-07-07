@@ -1,23 +1,66 @@
 
 import React,{ useEffect, useState } from 'react'
-import { Outlet, Link} from 'react-router-dom'
+import { Outlet, Link, useLocation} from 'react-router-dom'
 import { DownOutlined, ProfileOutlined, LoginOutlined, DatabaseOutlined, ToolOutlined, UserOutlined, TeamOutlined, ExclamationCircleFilled, GithubOutlined, BranchesOutlined, SettingOutlined } from '@ant-design/icons';
-import { Layout, Menu, theme, Modal, Tooltip, Dropdown, Space, message } from 'antd'
+import { ConfigProvider, Layout, Menu, theme, Modal, Tooltip, Dropdown, Space, message } from 'antd'
 import './common/common.styl'
 import axios from 'axios'
 import Logo from './page-login/img/logo-white.png'
 
 const { Header, Content, Footer, Sider } = Layout
 const { confirm } = Modal
+const appTheme = {
+  algorithm: theme.darkAlgorithm,
+  token: {
+    colorPrimary: '#00d992',
+    colorInfo: '#2fd6a1',
+    colorSuccess: '#00d992',
+    colorWarning: '#f59e0b',
+    colorError: '#ef4444',
+    colorBgBase: '#101010',
+    colorBgLayout: '#101010',
+    colorBgContainer: '#1a1a1a',
+    colorBgElevated: '#202020',
+    colorBorder: '#333634',
+    colorBorderSecondary: '#262826',
+    colorText: '#f2f2f2',
+    colorTextSecondary: '#bdbdbd',
+    colorTextTertiary: '#8b949e',
+    borderRadius: 6,
+    borderRadiusLG: 8,
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  },
+  components: {
+    Layout: {
+      bodyBg: '#101010',
+      headerBg: '#101010',
+      siderBg: '#101010',
+      footerBg: '#101010',
+    },
+    Menu: {
+      darkItemBg: '#101010',
+      darkSubMenuItemBg: '#101010',
+      darkItemColor: '#bdbdbd',
+      darkItemHoverColor: '#f2f2f2',
+      darkItemSelectedBg: 'rgba(0, 217, 146, 0.12)',
+      darkItemSelectedColor: '#00d992',
+      itemBorderRadius: 6,
+    },
+    Button: {
+      colorPrimary: '#00d992',
+      colorPrimaryHover: '#2fd6a1',
+      colorPrimaryActive: '#10b981',
+      primaryColor: '#101010',
+    },
+  },
+}
+
 const App = () => {
   const [collapsed, setCollapsed] = useState(false)
-  const {hash} = window.location
-  const [current, setCurrent] = useState(hash.split('/')[1])
+  const location = useLocation()
+  const [current, setCurrent] = useState(location.pathname.split('/')[1])
   const userInfo = JSON.parse(window.localStorage.getItem('userInfo'))
   const {username=''} = userInfo || {}
-  const {
-    token: { colorBgContainer },
-  } = theme.useToken()
 
   const menuMap = [
     {
@@ -98,16 +141,22 @@ const App = () => {
       window.location.href = '/#/login'
     }
   }, [])
+
+  useEffect(() => {
+    setCurrent(location.pathname.split('/')[1])
+  }, [location.pathname])
   
   return (
-    <Layout>
+    <ConfigProvider theme={appTheme}>
+    <Layout className="lineage-app-shell">
       <Sider
         breakpoint="lg"
         width={220}
+        className="lineage-sider"
       >
         <div className="logo">
           <img src={Logo} width={40} height={40} />
-          <span className='logo-txt fcf fs16 bold-600'>FlinkSQL Lineage</span>
+          <span className='logo-txt fs16 bold-600'>FlinkSQL Lineage</span>
         </div>
         <Menu
           theme="dark"
@@ -128,15 +177,15 @@ const App = () => {
       </Sider>
       <Layout>
         <Header
-          className="FBV FBAE header-box"
+          className="FBV FBAE header-box lineage-header"
         >
-          <div className='fcf'>
+          <div className='lineage-header-actions'>
             <Tooltip title='Document'>
-              <ProfileOutlined style={{color: '#fff', fontSize: 20}} className='mr32 hand' />
+              <ProfileOutlined className='lineage-header-icon hand' />
             </Tooltip>
             <Tooltip title='GitHub'>
               <Link to='https://github.com/HamaWhiteGG/flink-sql-lineage' target='_blank'>
-                <GithubOutlined style={{color: '#fff', fontSize: 20}} className='mr32 hand' />
+                <GithubOutlined className='lineage-header-icon hand' />
               </Link>
             </Tooltip>
             {/* <Button type='link'>EN</Button> */}
@@ -146,7 +195,7 @@ const App = () => {
               }}
               trigger='click'
             >
-              <Space>
+              <Space className="lineage-user-menu">
                 <span className='hand'>{username}</span>
                 <DownOutlined />
               </Space>
@@ -154,15 +203,16 @@ const App = () => {
           </div>
         </Header>
         <Content
+          className="lineage-content"
           style={{
             height: 'calc(100vh - 115px)',
             overflow: 'scroll',
           }}
         >
           <div
+            className="lineage-content-inner"
             style={{
               minHeight: 360,
-              background: colorBgContainer,
               height: '100%'
             }}
           >
@@ -170,6 +220,7 @@ const App = () => {
           </div>
         </Content>
         <Footer
+          className="lineage-footer"
           style={{
             textAlign: 'center',
           }}
@@ -178,6 +229,7 @@ const App = () => {
         </Footer>
       </Layout>
     </Layout>
+    </ConfigProvider>
   );
 }
 

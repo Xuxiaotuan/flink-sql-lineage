@@ -1,12 +1,18 @@
 .catalog-list {
   height: 600px;
   overflow: scroll;
-}
-.list-item {
-  /* margin-bottom: 24px; */
+  padding-right: 4px;
 }
 .list-item:hover {
-  box-shadow: 0 2px 5px #eee;
+  background: rgba(0, 217, 146, .06);
+  border-color: rgba(0, 217, 146, .42) !important;
+  box-shadow: none;
+}
+.list-item {
+  background: var(--lineage-surface);
+  border-color: var(--lineage-hairline) !important;
+  color: var(--lineage-body);
+  transition: background .16s ease, border-color .16s ease;
 }
 .list-item .item-logo {
   width: 30px;
@@ -23,10 +29,8 @@
 }
 .item-content .item-info{
   width: 100%;
-  /* height: 30px; */
   line-height: 30px;
-  /* text-align: right; */
-  color: #666;
+  color: var(--lineage-muted);
   font-size: 14px;
   padding-right: 10px;
 }
@@ -35,7 +39,9 @@
         
 .left-tree {
   width: 270px;
+  background: var(--lineage-surface);
 }
 .left-tree-box {
-  border-right: 1px solid #ddd;
+  border-right: 1px solid var(--lineage-hairline-soft);
+  background: var(--lineage-surface);
 }
