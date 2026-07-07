@@ -1,5 +1,5 @@
 import React from 'react'
-import ReactDOM from 'react-dom'
+import { createRoot } from 'react-dom/client'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import './index.css'
 import App from './App'
@@ -64,4 +64,4 @@ const ReactSample = () => {
 }
 export default ReactSample
 
-ReactDOM.render(<ReactSample />, document.getElementById('root'))
+createRoot(document.getElementById('root')).render(<ReactSample />)

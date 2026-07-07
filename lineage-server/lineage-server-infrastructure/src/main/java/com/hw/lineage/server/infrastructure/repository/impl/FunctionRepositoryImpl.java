@@ -136,12 +136,12 @@ public class FunctionRepositoryImpl extends AbstractBasicRepository implements F
             SelectStatementProvider selectStatement =
                     select(taskFunction.taskId, task.taskName, GroupConcat.of(taskFunction.sqlId).as(SQL_IDS),
                             max(taskFunction.createTime).as(taskFunction.createTime.name()))
-                                    .from(taskFunction)
-                                    .join(task).on(taskFunction.taskId, equalTo(task.taskId))
-                                    .where(taskFunction.functionId, isEqualTo(query.getFunctionId()))
-                                    .groupBy(taskFunction.taskId, task.taskName)
-                                    .orderBy(buildSortSpecification(query))
-                                    .build().render(RenderingStrategies.MYBATIS3);
+                            .from(taskFunction)
+                            .join(task).on(taskFunction.taskId, equalTo(task.taskId))
+                            .where(taskFunction.functionId, isEqualTo(query.getFunctionId()))
+                            .groupBy(taskFunction.taskId, task.taskName)
+                            .orderBy(buildSortSpecification(query))
+                            .build().render(RenderingStrategies.MYBATIS3);
 
             LOG.info("generated sql: {}", selectStatement.getSelectStatement());
             return page.doSelectPageInfo(() -> customFunctionMapper.selectMany(selectStatement));
@@ -153,11 +153,11 @@ public class FunctionRepositoryImpl extends AbstractBasicRepository implements F
         SelectStatementProvider selectStatement =
                 select(plugin.pluginCode, catalog.catalogName, function.database, function.functionId,
                         function.functionName)
-                                .from(function)
-                                .join(catalog).on(function.catalogId, equalTo(catalog.catalogId))
-                                .join(plugin).on(catalog.pluginId, equalTo(plugin.pluginId))
-                                .where(function.functionId, isEqualTo(functionId.getValue()))
-                                .build().render(RenderingStrategies.MYBATIS3);
+                        .from(function)
+                        .join(catalog).on(function.catalogId, equalTo(catalog.catalogId))
+                        .join(plugin).on(catalog.pluginId, equalTo(plugin.pluginId))
+                        .where(function.functionId, isEqualTo(functionId.getValue()))
+                        .build().render(RenderingStrategies.MYBATIS3);
 
         return customFunctionMapper.selectOne(selectStatement).orElseThrow(
                 () -> new LineageException(String.format("functionId [%s] is not existed", functionId.getValue())));
